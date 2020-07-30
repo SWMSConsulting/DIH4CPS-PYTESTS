@@ -3,6 +3,7 @@ import cv2
 import datetime
 
 cap = cv2.VideoCapture(0)
+# cap = cv2.VideoCapture('rtsp://192.168.1.64/1')
 
 # Define the codec and create VideoWriter object
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
