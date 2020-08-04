@@ -13,7 +13,7 @@ frame_height = int(cap.get(4))
 
 # initialize video writer
 fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
-fps = 30
+fps = 20
 video_filename = 'output.avi'
 out = cv2.VideoWriter(video_filename, fourcc, fps, (frame_width, frame_height))
 
@@ -24,7 +24,7 @@ start = datetime.datetime.now()
 while(cap.isOpened()):
     ret, frame = cap.read()
     if ret==True:
-        frame = cv2.flip(frame,0)
+        #frame = cv2.flip(frame,0)
 
         # write the flipped frame
         out.write(frame)
@@ -34,7 +34,7 @@ while(cap.isOpened()):
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         now = datetime.datetime.now()
-        l: datetime.timedelta = now - start
+        l = now - start
         if l.seconds > videolength:
             break
     else:
