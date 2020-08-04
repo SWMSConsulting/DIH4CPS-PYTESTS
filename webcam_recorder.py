@@ -3,7 +3,7 @@ WebcamRecorder: This class rules the recording of video data and saves the data 
 
 @authors:   Arno Schiller (AS)
 @email:     schiller@swms.de
-@version:   v0.0.1
+@version:   v0.0.3
 @license:   ...
 
 VERSION HISTORY
@@ -11,18 +11,26 @@ Version:    (Author) Description:                                           Date
 v0.0.1      (AS) First initialize. Added code from example files and        04.08.2020\n
                 solved some problems. Reading and writing video data                  \n
                 works fine on PC and Nvidia Jetson Nano                               \n
+v0.0.2      (AS) Added generic name to recording files.                     04.08.2020\n
+v0.0.2      (AS) First version using CronTab.                               04.08.2020\n
 
 ToDo:   - Add cronjobs (into a main class)
 """
 
 from cv2 import cv2
+# import cv2
+import os, datetime
+from crontab import CronTab
 
 class WebcamRecorder:
     """ 
     This class rules the recording of video data and saves the data into an avi file.
+    The file name will be generated like "IDENTIFIER_YEAR_MONTH_DAY_HOUR_MINUTE".
     
     Attributes:
     -----------
+    recording_name : str
+        representative name for clear attribution of the recording
     fps : int
         frames per second. 
     videolength_s : int
@@ -30,6 +38,7 @@ class WebcamRecorder:
     videolength_frames : int
         number of frames used to record video with given length.
     """
+    recording_name = "test1"
     fps = 20
     videolength_s = 5
     videolength_frames = fps * videolength_s
@@ -38,6 +47,24 @@ class WebcamRecorder:
         """
         Setup video capture and video writer. 
         """
+        # create folder if it does not exist
+        parentDir_path = "."
+        recordsDir_name = "Recordings"
+        recordsDir_path = os.path.join(parentDir_path, recordsDir_name)
+        if not os.path.exists(recordsDir_path):
+            os.mkdir(recordsDir_path)
+
+        # generate file name
+        currentDateTime = datetime.datetime.now()
+        file_name = "{0}_{1}-{2:02d}-{3:02d}_{4:02d}-{5:02d}-{6:02d}.avi".format(self.recording_name, 
+                                        currentDateTime.year, 
+                                        currentDateTime.month,
+                                        currentDateTime.day,
+                                        currentDateTime.hour,
+                                        currentDateTime.minute,
+                                        currentDateTime.second)
+        file_path = os.path.join(recordsDir_path, file_name)
+
         # initialize video capture
         self.capture = cv2.VideoCapture('rtsp://admin:admin@192.168.8.108:8554')
 
@@ -50,9 +77,7 @@ class WebcamRecorder:
 
         # initialize video writer
         fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
-        fps = self.fps
-        video_filename = 'output.avi'
-        self.writer = cv2.VideoWriter(video_filename, fourcc, fps, (self.frame_width, self.frame_height))
+        self.writer = cv2.VideoWriter(file_path, fourcc, self.fps, (self.frame_width, self.frame_height))
 
     def setVideoLength(self, newLength_s):
         """
@@ -103,6 +128,12 @@ class WebcamRecorder:
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
+    with CronTab(user='root') as cron:
+        job = cron.new(command='echo hello_world')
+        job.minute.every(1)
+    print('cron.write() was just executed')
+
+def doRecord():
     recorder = WebcamRecorder()
     recorder.record()
     recorder.release()
