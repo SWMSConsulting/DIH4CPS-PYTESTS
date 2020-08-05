@@ -48,7 +48,7 @@ class WebcamRecorder:
         Setup video capture and video writer. 
         """
         # create folder if it does not exist
-        parentDir_path = "."
+        parentDir_path = os.path.dirname(os.path.realpath(__file__))
         recordsDir_name = "Recordings"
         recordsDir_path = os.path.join(parentDir_path, recordsDir_name)
         if not os.path.exists(recordsDir_path):
@@ -104,7 +104,7 @@ class WebcamRecorder:
                 self.writer.write(frame)
 
                 # display frame 
-                cv2.imshow('frame',frame)
+                # cv2.imshow('frame',frame)
                 
                 counter_frames += 1
 
@@ -127,13 +127,10 @@ class WebcamRecorder:
         self.writer.release()
         cv2.destroyAllWindows()
 
-if __name__ == "__main__":
-    with CronTab(user='root') as cron:
-        job = cron.new(command='echo hello_world')
-        job.minute.every(1)
-    print('cron.write() was just executed')
-
 def doRecord():
     recorder = WebcamRecorder()
     recorder.record()
     recorder.release()
+
+if __name__ == "__main__":
+    doRecord()
