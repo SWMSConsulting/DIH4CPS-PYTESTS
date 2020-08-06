@@ -1,9 +1,12 @@
 """
 WebcamRecorder: This class rules the recording of video data and saves the data into an avi file. 
 
+Requirements:
+- opencv: pip install opencv-python (see https://www.learnopencv.com/install-opencv-4-on-raspberry-pi/)   
+
 @authors:   Arno Schiller (AS)
 @email:     schiller@swms.de
-@version:   v0.0.3
+@version:   v0.0.5
 @license:   ...
 
 VERSION HISTORY
@@ -12,13 +15,14 @@ v0.0.1      (AS) First initialize. Added code from example files and        04.0
                 solved some problems. Reading and writing video data                  \n
                 works fine on PC and Nvidia Jetson Nano                               \n
 v0.0.2      (AS) Added generic name to recording files.                     04.08.2020\n
-v0.0.2      (AS) First version using CronTab.                               04.08.2020\n
-
-ToDo:   - Add cronjobs (into a main class)
+v0.0.3      (AS) First version using CronTab.                               05.08.2020\n
+v0.0.4      (AS) Outsourced crontab to system (see README.txt)              05.08.2020\n
+v0.0.5      (AS) Added logging.                                             06.08.2020\n
 """
 
 import cv2
 import os, datetime
+import logging, time
 
 class WebcamRecorder:
     """ 
@@ -35,16 +39,21 @@ class WebcamRecorder:
         length of the video to record in seconds. 
     videolength_frames : int
         number of frames used to record video with given length.
+    max_tries : int
+        max number of tries to open camera/VideoWriter. 
     """
     recording_name = "test1"
     fps = 20
-    videolength_s = 5
+    videolength_s = 10
     videolength_frames = fps * videolength_s
+    max_tries = 5
 
     def __init__(self):
+        """ Setup video capture and video writer. 
         """
-        Setup video capture and video writer. 
-        """
+        logging.basicConfig(level=logging.INFO)
+        logging.info("Initialize WebcamRecorder.")
+
         # create folder if it does not exist
         parentDir_path = os.path.dirname(os.path.realpath(__file__))
         recordsDir_name = "Recordings"
@@ -66,16 +75,36 @@ class WebcamRecorder:
         # initialize video capture
         self.capture = cv2.VideoCapture('rtsp://admin:admin@192.168.8.108:8554')
 
-        if not self.capture.isOpened():
-            print("Can not open camera")
-            exit()
+        counter_tries = 1
+        while not self.capture.isOpened():
+            if counter_tries > self.max_tries:
+                logging.error("Can not connect to camera ({0} tries). Quitting...".format(counter_tries))
+                exit()
 
+            logging.warning("Can not connect to camera. Retrying...")
+            time.sleep(2)
+            self.capture = cv2.VideoCapture('rtsp://admin:admin@192.168.8.108:8554')
+            counter_tries += 1
+        logging.info("Connected to camera.")
+        # initialize video writer
         self.frame_width = int(self.capture.get(3))
         self.frame_height = int(self.capture.get(4))
-
-        # initialize video writer
+    
         fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
         self.writer = cv2.VideoWriter(file_path, fourcc, self.fps, (self.frame_width, self.frame_height))
+        
+        counter_tries = 1
+        while not self.writer.isOpened():
+            if counter_tries > self.max_tries:
+                logging.error("Can not open file writer ({0} tries). Quitting...".format(counter_tries))
+                exit()
+
+            logging.warning("Can not open file writer. Retrying...")
+            time.sleep(5)
+            self.writer = cv2.VideoWriter(file_path, fourcc, self.fps, (self.frame_width, self.frame_height))
+            counter_tries += 1
+        logging.info("VideoWriter is open.")
+
 
     def setVideoLength(self, newLength_s):
         """
@@ -93,6 +122,7 @@ class WebcamRecorder:
         """
         Records video and saves it to output file. 
         """
+        logging.info("Started recording.")
         counter_frames = 0
         while(self.capture.isOpened()):
             ret, frame = self.capture.read()
@@ -108,13 +138,18 @@ class WebcamRecorder:
 
                 # keyboard interrupt 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
+                    logging.info("Keyboard interrupt.")
                     break
 
                 # recording completed
                 if counter_frames >= self.videolength_frames:
+                    logging.info("Recording completed.")
                     break
 
             else:
+                if not self.capture.isOpened():
+                    logging.error("Lost connection to camera.")
+                logging.error("Can not read from VideoCapture.")
                 break
 
     def release(self):
