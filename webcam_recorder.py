@@ -17,10 +17,8 @@ v0.0.2      (AS) First version using CronTab.                               04.0
 ToDo:   - Add cronjobs (into a main class)
 """
 
-from cv2 import cv2
-# import cv2
+import cv2
 import os, datetime
-from crontab import CronTab
 
 class WebcamRecorder:
     """ 

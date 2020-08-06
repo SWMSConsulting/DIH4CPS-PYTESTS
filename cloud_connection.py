@@ -55,6 +55,7 @@ class CloudConnection:
         """
         Setup the S3 connection and the used bucket. Also define the recordings directory.
         """
+        print("init ...")
         # setup the S3 client
         self. s3_client = boto3.client('s3', 
             aws_access_key_id = self.access_key,
@@ -64,7 +65,8 @@ class CloudConnection:
 
         # get directory 
         parentDir_path = os.path.dirname(os.path.realpath(__file__))
-        self.recordsDir_path = os.path.join(parentDir_path, self.recordsDir_name)        
+        self.recordsDir_path = os.path.join(parentDir_path, self.recordsDir_name)
+        print("... init")
 
     def uploadFileToCloud(self, file_name, object_name=None):
         """Upload a file to an S3 bucket
@@ -78,9 +80,10 @@ class CloudConnection:
         """
         if object_name == None:
             object_name = file_name
-
+        print("Uploading file {0} ...".format(object_name))
         file_path = os.path.join(self.recordsDir_path, file_name)
         self.s3_client.upload_file(file_path, self.bucket_name,object_name, Callback=ProgressPercentage(file_path))
+        print("... done")
 
     def uploadFilesFromDay(self, recording_name, day_datetime):
         """ Upload every avi file that was created on that day.
@@ -92,17 +95,20 @@ class CloudConnection:
         recording_name : str
             representative name for clear attribution of the recording (see WebcamRecorder)
         """
+        print("Upload files from {0} ...".format(day_datetime))
         # create the filter string
         filter_str = "{0}_{1}-{2:02d}-{3:02d}_*-*-*.avi".format(recording_name, 
                                     day_datetime.year,
                                     day_datetime.month,
                                     day_datetime.day)
-        filter_path = os.path.join(self.recordsDir_name, filter_str)
+        filter_path = os.path.join(self.recordsDir_path, filter_str)
         file_paths = glob.glob(filter_path)
+        print(filter_path)
 
         for path in file_paths:
             file_name = os.path.basename(path)
             self.uploadFileToCloud(file_name)
+        print("... done")
 
 import sys
 import threading
@@ -135,4 +141,6 @@ def sendFilesFromYesterday():
     s3Con.uploadFilesFromDay("test1", yesterday)
 
 if __name__ == "__main__":
+    print("mainStarted")
     sendFilesFromYesterday()
+
