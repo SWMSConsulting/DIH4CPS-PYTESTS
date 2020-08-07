@@ -2,7 +2,9 @@
 WebcamRecorder: This class rules the recording of video data and saves the data into an avi file. 
 
 Requirements:
-- opencv: pip install opencv-python (see https://www.learnopencv.com/install-opencv-4-on-raspberry-pi/)   
+- opencv: pip install opencv-python 
+    see - https://www.learnopencv.com/install-opencv-4-on-raspberry-pi/
+        - https://medium.com/@aadeshshah/pre-installed-and-pre-configured-raspbian-with-opencv-4-1-0-for-raspberry-pi-3-model-b-b-9c307b9a993a
 
 @authors:   Arno Schiller (AS)
 @email:     schiller@swms.de
