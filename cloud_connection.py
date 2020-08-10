@@ -23,7 +23,7 @@ v0.0.3      (AS) Added logging.                                             06.0
 ToDo:   - Add return value to the functions (bool)
 """
 import boto3
-from botocore.exceptions import NoCredentialsError
+from botocore.exceptions 
 import os
 import glob
 import datetime
@@ -123,6 +123,10 @@ class CloudConnection:
         except NoCredentialsError:
             logging.error("Credentials are not available.")
             return False
+        except ClientError:
+            logging.error("Client Error")
+            return False
+
 
     def uploadFilesFromDay(self, recording_name, day_datetime):
         """ Upload every avi file that was created on that day.

@@ -43,12 +43,15 @@ class WebcamRecorder:
         number of frames used to record video with given length.
     max_tries : int
         max number of tries to open camera/VideoWriter. 
+    connection_str : str 
+        camera url to connect to like: "rtsp://USERNAME:PASSWORD@IP:PORT"
     """
     recording_name = "test1"
     fps = 20
     videolength_s = 10
     videolength_frames = fps * videolength_s
     max_tries = 5
+    connection_str = "rtsp://admin:admin@192.168.8.22:8554"
 
     def __init__(self):
         """ Setup video capture and video writer. 
@@ -75,7 +78,7 @@ class WebcamRecorder:
         file_path = os.path.join(recordsDir_path, file_name)
 
         # initialize video capture
-        self.capture = cv2.VideoCapture('rtsp://admin:admin@192.168.8.108:8554')
+        self.capture = cv2.VideoCapture(self.connection_str)
 
         counter_tries = 1
         while not self.capture.isOpened():
@@ -85,7 +88,7 @@ class WebcamRecorder:
 
             logging.warning("Can not connect to camera. Retrying...")
             time.sleep(2)
-            self.capture = cv2.VideoCapture('rtsp://admin:admin@192.168.8.108:8554')
+            self.capture = cv2.VideoCapture(self.connection_str)
             counter_tries += 1
         logging.info("Connected to camera.")
         # initialize video writer
