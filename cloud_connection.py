@@ -23,12 +23,13 @@ v0.0.3      (AS) Added logging.                                             06.0
 ToDo:   - Add return value to the functions (bool)
 """
 import boto3
-from botocore.exceptions 
-import os
-import glob
-import datetime
+from botocore.exceptions import *
+import os, glob
+import datetime, time
 from datetime import timedelta
 import logging
+from mqtt_connection import MQTTConnection
+from configuration import * 
 
 class CloudConnection:
     """ 
@@ -49,18 +50,26 @@ class CloudConnection:
     max_tries : int
         max number of tries to connect to cloud. 
     """
-    access_key = "minio"
-    secret_key = "miniostorage"
-    bucket_name = "test-dih4cps"
-    cloud_url = "https://minio.dih4cps.swms-cloud.com:9000/"
+    access_key = global_cloud_access_key
+    secret_key = global_cloud_secret_key
+    bucket_name = global_cloud_bucket_name
+    cloud_url = global_cloud_url
 
-    recordsDir_name = "Recordings"
+    recordsDir_name = global_recordsDir_name
     max_tries = 10
+
+    
+    module_name = "CloudConnection"
+    user_name = global_user_name
 
     def __init__(self):
         """
         Setup the S3 connection and the used bucket. Also define the recordings directory.
         """
+        # logging via MQTT
+        self.mqtt = MQTTConnection()
+
+        #logging via output / file
         logging.basicConfig(level=logging.INFO)
         logging.info("Initialize CloudConnection.")
 
@@ -69,9 +78,11 @@ class CloudConnection:
         self.s3_client = None
         while self.s3_client == None:
             if counter_tries == 0:
-                logging.info("Connecting to S3 server...")
+                # logging.info("Connecting to S3 server...")
+                self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["ConnectingToServer"])
             if counter_tries > self.max_tries:
-                logging.error("Can not connect to S3 server ({0} tries). Quitting...".format(counter_tries))
+                # logging.error("Can not connect to S3 server ({0} tries). Quitting...".format(counter_tries))
+                self.mqtt.sendProcessMessage(self.user_name, self.mqtt.error_list[self.module_name]["ConnectServerError"])
                 exit()
             self.s3_client = boto3.client('s3', 
                 aws_access_key_id = self.access_key,
@@ -79,7 +90,8 @@ class CloudConnection:
                 endpoint_url=self.cloud_url, 
                 config=boto3.session.Config(signature_version='s3v4'))
             counter_tries += 1
-        logging.info("Connected to S3 server.")
+        self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["ConnectedToServer"])
+        # logging.info("Connected to S3 server.")
 
         # get directory 
         parentDir_path = os.path.dirname(os.path.realpath(__file__))
@@ -111,20 +123,25 @@ class CloudConnection:
         """
         if object_name == None:
             object_name = file_name
-        logging.info("Uploading file {0} ...".format(object_name))
+        self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["UploadingFile"], file=object_name)
+        # logging.info("Uploading file {0} ...".format(object_name))
         file_path = os.path.join(self.recordsDir_path, file_name)
         try:
             self.s3_client.upload_file(file_path, self.bucket_name,object_name, Callback=ProgressPercentage(file_path))
-            logging.info("Uploading file {0} done".format(object_name))
+            self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["UploadedFile"], file=object_name)
+            # logging.info("Uploading file {0} done".format(object_name))
             return True
         except FileNotFoundError:
-            logging.error("The file to upload was not found.")
+            self.mqtt.sendProcessMessage(self.user_name, self.mqtt.error_list[self.module_name]["FileNotFound"], file=object_name)
+            #logging.error("The file to upload was not found.")
             return False
         except NoCredentialsError:
-            logging.error("Credentials are not available.")
+            self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["NoCredentials"], file=object_name)
+            #logging.error("Credentials are not available.")
             return False
         except ClientError:
-            logging.error("Client Error")
+            self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["ClientError"], file=object_name)
+            #logging.error("Client Error")
             return False
 
 
@@ -150,6 +167,10 @@ class CloudConnection:
         for path in file_paths:
             file_name = os.path.basename(path)
             self.uploadFileToCloud(file_name)
+
+        self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["ConnectedToServer"])
+        time.sleep(1)
+        self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["DisconnectedServer"])
         logging.info("Upload files from {0} done.".format(day_datetime))
 
 import sys

@@ -47,34 +47,81 @@ error_list : dict
 
 import paho.mqtt.client as mqtt
 import datetime, time
+from configuration import *
+
 class MQTTConnection:
     # SSL/TLS1.2 aktivieren. Pub auf den Topic IOT/{irgendwas}
-    mqtt_host = "demo2.iotstack.co"
-    user_name = "pubclient"
-    password = "tiguitto"
+    mqtt_host = global_mqtt_host
+    user_name = global_mqtt_user_name
+    password = global_mqtt_password
 
-    port = 8883
+    port = global_mqtt_port
     keepalive = 60
 
-    local_mqtt = True
+    local_mqtt = global_mqtt_usinglocalhost
+
+    topic = "IOT/test"
 
     info_list = {
-        "WebcamRecorder" : {"a" : "b"},
-        "CloudConnection" : {
-            "FileUploaded": "modul=CloudConnection,process=UploadFile status=0"
-        }
-    }
-    warning_list = {}
+        "WebcamRecorder" : {
+            # Open camera
+            "ClosedCamera"      : "modul=WebcamRecorder,process=OpenCamera status=0",
+            "OpeningCamera"     : "modul=WebcamRecorder,process=OpenCamera status=1",
+            "OpenedCamera"      : "modul=WebcamRecorder,process=OpenCamera status=2",
+        
+            # Open writer
+            "ClosedWriter"      : "modul=WebcamRecorder,process=OpenWriter status=0",
+            "OpeningWriter"     : "modul=WebcamRecorder,process=OpenWriter status=1",
+            "OpenedWriter"      : "modul=WebcamRecorder,process=OpenWriter status=2",
 
-    error_list = {
-        "WebcamRecorder" : {"a" : "b"},
+            # Recording file
+            "RecordingFile"     : "modul=WebcamRecorder,process=RecordFile status=1",
+            "RecordedFile"      : "modul=WebcamRecorder,process=RecordFile status=2"
+        },
+
         "CloudConnection" : {
             # Upload files 
-            "FileNotFound": "modul=CloudConnection,process=UploadFile status=8",
-            "NoCredentials": "modul=CloudConnection,process=UploadFile status=9",
-            "UploadError": "modul=CloudConnection,process=UploadFile status=10"
+            "UploadingFile" : "modul=CloudConnection,process=UploadFile status=1",
+            "UploadedFile"  : "modul=CloudConnection,process=UploadFile status=2",
+
+            # connecting to server
+            "DisconnectedServer"    : "modul=CloudConnection,process=ConnectServer status=0",
+            "ConnectingToServer"    : "modul=CloudConnection,process=ConnectServer status=1",
+            "ConnectedToServer"     : "modul=CloudConnection,process=ConnectServer status=2"
         }
-    
+    }
+    warning_list = {
+        "WebcamRecorder" : {
+            # Open camera
+            "OpeningCameraFailed"   : "modul=WebcamRecorder,process=OpenCamera status=4",
+            # Open writer
+            "OpenFileWriterFailed"  : "modul=WebcamRecorder,process=OpenWriter status=4"
+        }
+    }
+
+    error_list = {
+        "WebcamRecorder" : {
+            # Open camera
+            "OpenCameraError"   : "modul=CloudConnection,process=OpenCamera status=10",
+            # Open writer
+            "OpenWriterError"   : "modul=CloudConnection,process=OpenWriter status=10",
+            # Record file 
+            "RecordLostConnection"      : "modul=CloudConnection,process=RecordFile status=9",
+            "RecordFileError"           : "modul=CloudConnection,process=RecordFile status=10"
+        },
+
+        "CloudConnection" : {
+            # Upload files 
+            "ClientError"   : "modul=CloudConnection,process=UploadFile status=7",
+            "FileNotFound"  : "modul=CloudConnection,process=UploadFile status=8",
+            "NoCredentials" : "modul=CloudConnection,process=UploadFile status=9",
+            "UploadError"   : "modul=CloudConnection,process=UploadFile status=10",
+
+            # connecting to server
+            "ConnectServerError" : "modul=CloudConnection,process=ConnectServer status=10"
+        }
+    }
+
     def __init__(self):
         """ Setup the MQTT connection. 
         """
@@ -90,22 +137,26 @@ class MQTTConnection:
             self.client.connect(self.mqtt_host, self.port, self.keepalive)
         self.client.tls_set()
         self.client.loop_start()
+        time.sleep(2)
 
     def testloop(self):
         while True:
-            msg = "{0}: test".format(datetime.datetime.now())
+            msg = "test"
             print(msg)
-            res = self.client.publish("IOT/test", msg)
+            res = self.sendMessage(msg)
             print(res)
             time.sleep(5)
-        #print(res)
-        #self.client.loop_forever()
 
-    def getInfluxMessage(self, user, message):
-        msg = "process,user={0}{1}".format(user, message)
+    def sendProcessMessage(self, user, message, **options):
+        msg = "process,user={},".format(user)
+        if not options.get("file")  == None:
+            msg += "file={},".format(options.get("file")) 
+        msg += "{}".format(message)
         print(msg)
-        # "process,device=windows,processname=WebcamRecorder status=56"
-        # measurement(,tag_set) field_set(,field_set) (timestamp)
+        res = self.sendMessage(msg)
+
+    def sendMessage(self, message):
+        return self.client.publish("IOT/test", message)
 
 def on_connect(client, userdata, flags, rc):
     """ The callback for when the client receives a CONNACK response from the server.
@@ -125,6 +176,5 @@ def on_message(client, userdata, msg):
 
 if __name__ == '__main__':
     conn = MQTTConnection()
-    time.sleep(2)
     #conn.testloop()
-    conn.getInfluxMessage("test1", conn.info_list["CloudConnection"]["FileUploaded"])
+    conn.sendMessage("temperature,location=CPU,modul=SystemMonitoring,user=test1 temperature=20")
