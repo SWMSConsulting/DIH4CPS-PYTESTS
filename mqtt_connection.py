@@ -1,5 +1,5 @@
 """
-MQTTConnection: This class 
+MQTTConnection: This class rules the connection to the MQTT broker (iotstack).
 
 Requirements:
 - paho (mqtt api): pip install paho-mqtt (see https://pypi.org/project/paho-mqtt/)
@@ -130,12 +130,12 @@ class MQTTConnection:
         self.client._password = self.password
         self.client.on_connect = on_connect
         self.client.on_message = on_message
+        self.client.tls_set()
     
         if self.local_mqtt:
             self.client.connect("localhost", 1883, 60)
         else:
             self.client.connect(self.mqtt_host, self.port, self.keepalive)
-        self.client.tls_set()
         self.client.loop_start()
         time.sleep(2)
 

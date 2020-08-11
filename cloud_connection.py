@@ -19,6 +19,7 @@ v0.0.2      (AS) Added functionality to upload every file created on the    05.0
                 selected day. Starting this script will run the function              \n
                 for yesterday.                                                        \n
 v0.0.3      (AS) Added logging.                                             06.08.2020\n
+v0.0.4      (AS) Included MQTT.                                             10.08.2020\n
 
 ToDo:   - Add return value to the functions (bool)
 """

@@ -157,20 +157,20 @@ class WebcamRecorder:
                 self.writer.write(frame)
 
                 # display frame 
-                # cv2.imshow('frame',frame)
+                cv2.imshow('frame',frame)
                 
                 counter_frames += 1
                 # recording completed
                 if counter_frames >= self.videolength_frames:
                     logging.info("Recording completed.")
-                    self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["RecordedFile"])
+                    self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["RecordedFile"],file=self.file_name)
                     break
 
             else:
                 if not self.capture.isOpened():
-                    self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["RecordLostConnection"])
+                    self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["RecordLostConnection"],file=self.file_name)
                     logging.error("Lost connection to camera.")
-                self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["RecordFileError"])
+                self.mqtt.sendProcessMessage(self.user_name, self.mqtt.info_list[self.module_name]["RecordFileError"],file=self.file_name)
                 logging.error("Can not read from VideoCapture.")
                 break
 
