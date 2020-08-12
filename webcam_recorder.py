@@ -8,7 +8,7 @@ Requirements:
 
 @authors:   Arno Schiller (AS)
 @email:     schiller@swms.de
-@version:   v0.0.5
+@version:   v0.0.7
 @license:   ...
 
 VERSION HISTORY
@@ -21,11 +21,13 @@ v0.0.3      (AS) First version using CronTab.                               05.0
 v0.0.4      (AS) Outsourced crontab to system (see README.txt)              05.08.2020\n
 v0.0.5      (AS) Added logging.                                             06.08.2020\n
 v0.0.6      (AS) Included MQTT API.                                         10.08.2020\n
+v0.0.7      (AS) Included args handler to change video length.              12.08.2020\n
 """
 
 import cv2
 import os, datetime
 import logging, time
+import argparse
 from mqtt_connection import MQTTConnection
 from configuration import * 
 
@@ -41,13 +43,18 @@ class WebcamRecorder:
     fps : int
         frames per second. 
     videolength_s : int
-        length of the video to record in seconds. 
+        length of the video to record in seconds 
     videolength_frames : int
-        number of frames used to record video with given length.
+        number of frames used to record video with given length
     max_tries : int
-        max number of tries to open camera/VideoWriter. 
+        max number of tries to open camera/VideoWriter
     connection_str : str 
         camera url to connect to like: "rtsp://USERNAME:PASSWORD@IP:PORT"
+        
+    user_name : str
+        representative name for clear attribution of MQTT messages
+    module_name : str 
+        name of this class
     """
     recording_name = global_user_name
     fps = 20
@@ -62,6 +69,14 @@ class WebcamRecorder:
     def __init__(self):
         """ Setup video capture and video writer. 
         """
+        # setup argument parser
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--videoLength", type=int, help="set specific video length, default = 10s.")
+        args = parser.parse_args()
+        if args.videoLength > 0 and args.videoLength < 300:
+            self.setVideoLength(args.videoLength)
+        print(args.videoLength)
+
         # logging via MQTT
         self.mqtt = MQTTConnection()
         
@@ -157,8 +172,12 @@ class WebcamRecorder:
                 self.writer.write(frame)
 
                 # display frame 
+                """
                 cv2.imshow('frame',frame)
-                
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                # """
+
                 counter_frames += 1
                 # recording completed
                 if counter_frames >= self.videolength_frames:
